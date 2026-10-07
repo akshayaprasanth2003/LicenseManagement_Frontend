@@ -1134,3 +1134,24 @@ a:hover { color: var(--primary-700); }
   transform: translateY(0);
 }
 
+/* ── App Hero Header Card Grid ────────────────────────────────────────────── */
+.app-hero-header-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr 0.85fr 0.9fr;
+  gap: 20px;
+  align-items: center;
+}
+
+@media (max-width: 1200px) {
+  .app-hero-header-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-hero-header-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+

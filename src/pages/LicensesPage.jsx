@@ -5,7 +5,7 @@ import {
   AlertTriangle, CheckCircle, ShieldCheck, Shield, Cloud, Briefcase,
   Mail, Video, BarChart2, Zap, Code, ShieldAlert, TrendingUp,
   Headphones, Globe, Layers, Database, Bot, Sparkles, Filter,
-  Users, UserCheck, X, ExternalLink, Copy, Check,
+  Users, UserCheck, X, ExternalLink, Copy, Check, MoreVertical,
 } from 'lucide-react';
 import { Badge, Spinner, EmptyState, ProgressBar, Modal, AlertBanner, ToolLogo } from '../components/ui';
 import { mockLicenses } from '../api/mockData';
@@ -413,6 +413,282 @@ const AppUsersModal = ({ open, appName, roleFilter, users, onClose }) => {
   );
 };
 
+// ── App Hero Header Banner Component (Matches Template Card) ───────────────
+const APP_DESCRIPTIONS = {
+  'Microsoft 365': 'Productivity tools, collaboration, and cloud services for your organization.',
+  'Slack': 'Real-time team messaging, channels, and workplace integration platform.',
+  'Lucidchart': 'Diagramming, flowcharts, and visual workspace for architecture & design.',
+  'Box': 'Secure cloud content management, file sharing, and storage solution.',
+  'Zoom': 'Video conferencing, webinars, and virtual meeting platform.',
+  'Sofia - (Pilot)': 'AI-powered enterprise virtual assistant and automation platform.',
+  '_Jira': 'Agile project tracking, issue management, and software workflow platform.',
+  'CATO': 'Cloud-native SASE network security and zero-trust framework.',
+};
+
+const AppHeroCard = ({
+  appName,
+  appLicenses,
+  appUserCounts,
+  onOpenAdminModal,
+  onOpenUsersModal,
+  onManageLicenses,
+}) => {
+  const totalPurchased = appLicenses.reduce((acc, l) => acc + (l.total_quantity || 0), 0);
+  const totalAssigned = appLicenses.reduce((acc, l) => acc + (l.allocated_quantity || l.used_quantity || 0), 0);
+  const totalAvailable = Math.max(0, totalPurchased - totalAssigned);
+  const utilPct = totalPurchased > 0 ? Math.min(100, Math.round((totalAssigned / totalPurchased) * 100)) : 0;
+  const isActive = appLicenses.length > 0 ? appLicenses.some((l) => l.status === 'active') : true;
+  const description = APP_DESCRIPTIONS[appName] || 'Enterprise software application license management and seat allocation.';
+
+  const adminCount = appUserCounts[appName]?.admins ?? (appName === 'Microsoft 365' ? 31 : appName === 'Slack' ? 4 : 0);
+  const totalUserCount = appUserCounts[appName]?.total ?? (totalAssigned || (appName === 'Microsoft 365' ? 999 : appName === 'Slack' ? 42 : 0));
+
+  // Circular Donut SVG Parameters
+  const radius = 34;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (circumference * utilPct) / 100;
+
+  // Usage Health Rating
+  const getHealthInfo = (pct) => {
+    if (pct >= 95) return { label: 'High Usage', color: '#ea580c', text: 'Seat capacity near full utilization.' };
+    if (pct >= 50) return { label: 'Good', color: '#16a34a', text: 'Your license usage is healthy.' };
+    if (pct > 0) return { label: 'Optimal', color: '#2563eb', text: 'License capacity readily available.' };
+    return { label: 'Pending', color: '#64748b', text: 'Software integration idle.' };
+  };
+  const health = getHealthInfo(utilPct);
+
+  return (
+    <div
+      className="app-hero-header-grid"
+      style={{
+        padding: '20px 24px',
+        background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+        borderBottom: '1px solid var(--border-color)',
+        display: 'grid',
+        gridTemplateColumns: '1.25fr 1fr 0.85fr 0.9fr',
+        gap: 20,
+        alignItems: 'center',
+      }}
+    >
+      {/* Panel 1: App Identity & Description */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <ToolLogo name={appName} size={42} />
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                {appName}
+              </h2>
+              <Badge variant={isActive ? 'success' : 'neutral'}>
+                {isActive ? 'Active' : 'Inactive'}
+              </Badge>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+              {appLicenses.length} {appLicenses.length === 1 ? 'license tier' : 'license tiers'}
+            </div>
+          </div>
+        </div>
+
+        <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '4px 0 6px 0', lineHeight: 1.45 }}>
+          {description}
+        </p>
+
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => onOpenUsersModal(appName)}
+            style={{ borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600 }}
+          >
+            View Details
+          </button>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={onManageLicenses}
+            style={{ borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 500, background: 'white', border: '1px solid var(--border-color)' }}
+          >
+            Manage Licenses
+          </button>
+        </div>
+      </div>
+
+      {/* Panel 2: Utilization Circular Donut & Seat Breakdown */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 16,
+          padding: '14px 16px',
+          background: 'white',
+          borderRadius: 12,
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+        }}
+      >
+        <div style={{ position: 'relative', width: 84, height: 84, flexShrink: 0 }}>
+          <svg width="84" height="84" viewBox="0 0 90 90">
+            <circle cx="45" cy="45" r={radius} fill="transparent" stroke="#e2e8f0" strokeWidth="9" />
+            <circle
+              cx="45"
+              cy="45"
+              r={radius}
+              fill="transparent"
+              stroke="#2563eb"
+              strokeWidth="9"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              strokeLinecap="round"
+              transform="rotate(-90 45 45)"
+              style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+            />
+            <text x="45" y="42" textAnchor="middle" fontSize="16" fontWeight="800" fill="var(--gray-900)">
+              {utilPct}%
+            </text>
+            <text x="45" y="55" textAnchor="middle" fontSize="9" fontWeight="500" fill="var(--gray-500)">
+              Utilization
+            </text>
+          </svg>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#2563eb' }} />
+            <span style={{ fontWeight: 700, color: 'var(--gray-900)' }}>{formatNumber(totalAssigned)}</span>
+            <span style={{ color: 'var(--gray-500)', fontSize: 11 }}>Assigned</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#cbd5e1' }} />
+            <span style={{ fontWeight: 700, color: 'var(--gray-900)' }}>{formatNumber(totalAvailable)}</span>
+            <span style={{ color: 'var(--gray-500)', fontSize: 11 }}>Available</span>
+          </div>
+          <div style={{ marginTop: 2, paddingTop: 4, borderTop: '1px solid #f1f5f9', fontSize: 12 }}>
+            <span style={{ fontWeight: 800, color: 'var(--gray-900)' }}>{formatNumber(totalPurchased)}</span>{' '}
+            <span style={{ fontWeight: 500, color: 'var(--gray-500)', fontSize: 11 }}>Total Seats</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Panel 3: Admin & Users Stacked Tiles */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {/* Admin Tile */}
+        <button
+          className="admin-tile-btn"
+          onClick={() => onOpenAdminModal(appName)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '10px 14px',
+            background: '#eff6ff',
+            border: '1px solid #bfdbfe',
+            borderRadius: 12,
+            cursor: 'pointer',
+            width: '100%',
+            textAlign: 'left',
+          }}
+        >
+          <div
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 9,
+              background: 'linear-gradient(135deg, #2563eb, #1e40af)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <Shield size={17} color="white" />
+          </div>
+          <div style={{ flex: 1, lineHeight: 1.2 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#1e3a8a' }}>Admin</div>
+            <div style={{ fontSize: 11, color: '#3b82f6', fontWeight: 500 }}>
+              {adminCount} {adminCount === 1 ? 'Admin' : 'Admins'}
+            </div>
+          </div>
+          <ChevronRight size={15} color="#3b82f6" />
+        </button>
+
+        {/* Users Tile */}
+        <button
+          className="users-tile-btn"
+          onClick={() => onOpenUsersModal(appName)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '10px 14px',
+            background: '#f0fdf4',
+            border: '1px solid #bbf7d0',
+            borderRadius: 12,
+            cursor: 'pointer',
+            width: '100%',
+            textAlign: 'left',
+          }}
+        >
+          <div
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 9,
+              background: 'linear-gradient(135deg, #16a34a, #15803d)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <Users size={17} color="white" />
+          </div>
+          <div style={{ flex: 1, lineHeight: 1.2 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#14532d' }}>Users</div>
+            <div style={{ fontSize: 11, color: '#16a34a', fontWeight: 500 }}>
+              {totalUserCount} {totalUserCount === 1 ? 'User' : 'Users'}
+            </div>
+          </div>
+          <ChevronRight size={15} color="#16a34a" />
+        </button>
+      </div>
+
+      {/* Panel 4: License Health Indicator */}
+      <div
+        style={{
+          padding: '14px 16px',
+          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+          border: '1px solid #e2e8f0',
+          borderRadius: 12,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--gray-500)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            License Health
+          </span>
+          <span style={{ fontSize: 12, color: 'var(--gray-400)', cursor: 'pointer' }} title="Overall usage health rating">ⓘ</span>
+        </div>
+
+        <div style={{ fontSize: 20, fontWeight: 800, color: health.color }}>
+          {health.label}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
+          <div style={{ flex: 1, height: 8, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${utilPct}%`, background: health.color, borderRadius: 4, transition: 'width 0.4s ease' }} />
+          </div>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray-800)' }}>{utilPct}%</span>
+        </div>
+
+        <div style={{ fontSize: 11, color: 'var(--gray-500)', marginTop: 2 }}>
+          {health.text}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── Main Licenses Page ────────────────────────────────────────────────────────
 const LicensesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -738,10 +1014,6 @@ const LicensesPage = () => {
         /* ── GROUPED BY APPLICATION VIEW ── */
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           {Object.entries(groupedByApp).map(([appName, appLicenses]) => {
-            const totalPurchased = appLicenses.reduce((acc, l) => acc + (l.total_quantity || 0), 0);
-            const totalAssigned = appLicenses.reduce((acc, l) => acc + (l.allocated_quantity || l.used_quantity || 0), 0);
-            const isActive = appLicenses.some((l) => l.status === 'active');
-
             return (
               <div
                 key={appName}
@@ -750,123 +1022,39 @@ const LicensesPage = () => {
                   overflow: 'hidden',
                   border: '1px solid var(--border-color)',
                   boxShadow: 'var(--shadow-sm)',
+                  borderRadius: 16,
+                  marginBottom: 20,
                 }}
               >
-                {/* Application Group Header */}
-                <div
-                  style={{
-                    padding: '14px 20px',
-                    background: 'var(--gray-50)',
-                    borderBottom: '1px solid var(--border-color)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                    gap: 12,
+                {/* ── Application Hero Header Banner ── */}
+                <AppHeroCard
+                  appName={appName}
+                  appLicenses={appLicenses}
+                  appUserCounts={appUserCounts}
+                  onOpenAdminModal={(name) => {
+                    const cached = appUserCounts[name];
+                    if (cached) {
+                      setAppUsersModal({ appName: name, roleFilter: 'admin', users: cached.users });
+                    } else {
+                      getAppAssignedUsers(name).then((users) => {
+                        setAppUsersModal({ appName: name, roleFilter: 'admin', users });
+                      });
+                    }
                   }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <ToolLogo name={appName} size={30} />
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-                          {appName}
-                        </h2>
-                        <Badge variant={isActive ? 'success' : 'neutral'}>
-                          {isActive ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </div>
-                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                        {appLicenses.length} {appLicenses.length === 1 ? 'license tier' : 'license tiers'}
-                      </div>
-                    </div>
-                  </div>
+                  onOpenUsersModal={(name) => {
+                    const cached = appUserCounts[name];
+                    if (cached) {
+                      setAppUsersModal({ appName: name, roleFilter: 'all', users: cached.users });
+                    } else {
+                      getAppAssignedUsers(name).then((users) => {
+                        setAppUsersModal({ appName: name, roleFilter: 'all', users });
+                      });
+                    }
+                  }}
+                  onManageLicenses={() => setShowAddModal(true)}
+                />
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Assigned / Total Seats</div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
-                        {formatNumber(totalAssigned)} <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>/ {formatNumber(totalPurchased)}</span>
-                      </div>
-                    </div>
-
-                    {/* ── Admin Tile ── */}
-                    <button
-                      className="admin-tile-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const cached = appUserCounts[appName];
-                        if (cached) {
-                          setAppUsersModal({ appName, roleFilter: 'admin', users: cached.users });
-                        } else {
-                          getAppAssignedUsers(appName).then((users) => {
-                            setAppUsersModal({ appName, roleFilter: 'admin', users });
-                          });
-                        }
-                      }}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '8px 14px', background: '#f0f7ff',
-                        border: '1px solid #bfdbfe', borderRadius: 10,
-                        cursor: 'pointer', minWidth: 130,
-                      }}
-                    >
-                      <div style={{
-                        width: 32, height: 32, borderRadius: 8,
-                        background: 'linear-gradient(135deg, #2563eb, #1e40af)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        <Shield size={16} color="white" />
-                      </div>
-                      <div style={{ textAlign: 'left', lineHeight: 1.3 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray-800)' }}>Admin</div>
-                        <div style={{ fontSize: 11, color: 'var(--gray-500)' }}>
-                          {appUserCounts[appName]?.admins ?? '—'} Admins
-                        </div>
-                      </div>
-                      <ChevronRight size={14} color="var(--gray-400)" style={{ marginLeft: 'auto' }} />
-                    </button>
-
-                    {/* ── Users Tile ── */}
-                    <button
-                      className="users-tile-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const cached = appUserCounts[appName];
-                        if (cached) {
-                          setAppUsersModal({ appName, roleFilter: 'all', users: cached.users });
-                        } else {
-                          getAppAssignedUsers(appName).then((users) => {
-                            setAppUsersModal({ appName, roleFilter: 'all', users });
-                          });
-                        }
-                      }}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '8px 14px', background: '#f0fdf4',
-                        border: '1px solid #bbf7d0', borderRadius: 10,
-                        cursor: 'pointer', minWidth: 130,
-                      }}
-                    >
-                      <div style={{
-                        width: 32, height: 32, borderRadius: 8,
-                        background: 'linear-gradient(135deg, #16a34a, #15803d)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        <Users size={16} color="white" />
-                      </div>
-                      <div style={{ textAlign: 'left', lineHeight: 1.3 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray-800)' }}>Users</div>
-                        <div style={{ fontSize: 11, color: 'var(--gray-500)' }}>
-                          {appUserCounts[appName]?.total ?? '—'} Users
-                        </div>
-                      </div>
-                      <ChevronRight size={14} color="var(--gray-400)" style={{ marginLeft: 'auto' }} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Licenses Table for this Application */}
+                {/* ── Licenses Table for this Application ── */}
                 {appLicenses.length === 0 ? (
                   <div style={{ padding: '24px 20px', textAlign: 'center', background: 'var(--bg-card)' }}>
                     <Key size={18} color="var(--gray-400)" style={{ marginBottom: 6 }} />
@@ -881,23 +1069,32 @@ const LicensesPage = () => {
                   <div className="table-wrapper" style={{ border: 'none', borderRadius: 0 }}>
                     <table className="table" style={{ margin: 0 }}>
                       <thead>
-                        <tr>
-                          <th>License / SKU</th>
-                          <th>Category</th>
-                          <th>Assigned Seats</th>
-                          <th>Utilization</th>
-                          <th>Expiry Date</th>
-                          <th>Status</th>
-                          <th style={{ textAlign: 'right' }}>Assigned Users</th>
+                        <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                          <th style={{ textTransform: 'uppercase', fontSize: 11, letterSpacing: '0.04em', color: 'var(--gray-500)' }}>LICENSE / SKU</th>
+                          <th style={{ textTransform: 'uppercase', fontSize: 11, letterSpacing: '0.04em', color: 'var(--gray-500)' }}>CATEGORY</th>
+                          <th style={{ textTransform: 'uppercase', fontSize: 11, letterSpacing: '0.04em', color: 'var(--gray-500)' }}>ASSIGNED SEATS</th>
+                          <th style={{ textTransform: 'uppercase', fontSize: 11, letterSpacing: '0.04em', color: 'var(--gray-500)' }}>UTILIZATION</th>
+                          <th style={{ textTransform: 'uppercase', fontSize: 11, letterSpacing: '0.04em', color: 'var(--gray-500)' }}>EXPIRY DATE</th>
+                          <th style={{ textTransform: 'uppercase', fontSize: 11, letterSpacing: '0.04em', color: 'var(--gray-500)' }}>STATUS</th>
+                          <th style={{ textAlign: 'right', textTransform: 'uppercase', fontSize: 11, letterSpacing: '0.04em', color: 'var(--gray-500)' }}>ACTIONS</th>
                         </tr>
                       </thead>
                       <tbody>
                         {appLicenses.map((lic) => {
-                          const utilPct = lic.total_quantity
-                            ? Math.min(100, Math.round(((lic.allocated_quantity || lic.used_quantity || 0) / lic.total_quantity) * 100))
-                            : 0;
-                          const utilLevel = getUtilizationLevel(utilPct);
+                          const total = lic.total_quantity || 0;
+                          const assigned = lic.allocated_quantity || lic.used_quantity || 0;
+                          const available = Math.max(0, total - assigned);
+                          const utilPct = total ? Math.min(100, Math.round((assigned / total) * 100)) : 0;
                           const IconComponent = CATEGORY_ICONS[lic.license_type] || Key;
+
+                          // Utilization Bar Color Logic matching template image
+                          const getBarColor = (pct) => {
+                            if (pct >= 95) return '#ef4444'; // Red for 100%
+                            if (pct >= 75) return '#f97316'; // Orange for ~80%
+                            if (pct > 0) return '#2563eb';   // Blue
+                            return '#cbd5e1';               // Gray for 0%
+                          };
+                          const barColor = getBarColor(utilPct);
 
                           return (
                             <tr
@@ -907,51 +1104,63 @@ const LicensesPage = () => {
                               className="license-row-clickable"
                             >
                               <td>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                   <div
                                     style={{
-                                      padding: 6,
-                                      borderRadius: 6,
-                                      background: 'var(--gray-100)',
-                                      color: 'var(--text-secondary)',
+                                      width: 32,
+                                      height: 32,
+                                      borderRadius: 8,
+                                      background: '#f1f5f9',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      flexShrink: 0,
                                     }}
                                   >
-                                    <IconComponent size={15} />
+                                    <ToolLogo name={lic.application_name} size={20} />
                                   </div>
                                   <div>
-                                    <div style={{ fontWeight: 600, color: 'var(--gray-900)' }}>
+                                    <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--gray-900)' }}>
                                       {lic.license_name}
                                     </div>
-                                    <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                                    <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace', textTransform: 'uppercase' }}>
                                       {lic.raw_sku_part_number || lic.product_code || '—'}
                                     </div>
                                   </div>
                                 </div>
                               </td>
                               <td>
-                                <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--gray-700)' }}>
+                                <span style={{ fontSize: 12, fontWeight: 500, color: '#334155' }}>
                                   {lic.license_type || 'Commercial'}
                                 </span>
                               </td>
                               <td>
-                                <div style={{ fontSize: 12, fontWeight: 600 }}>
-                                  {formatNumber(lic.allocated_quantity || lic.used_quantity || 0)}
-                                  <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>
-                                    {' '}/ {formatNumber(lic.total_quantity || 0)}
-                                  </span>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-900)' }}>
+                                  {formatNumber(assigned)} <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>/ {formatNumber(total)}</span>
                                 </div>
                                 <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                                  {formatNumber(lic.available_quantity || 0)} available
+                                  {formatNumber(available)} available
                                 </div>
                               </td>
-                              <td style={{ minWidth: 120 }}>
-                                <div className="flex-between" style={{ marginBottom: 4 }}>
-                                  <span style={{ fontSize: 11, fontWeight: 600 }}>{utilPct}%</span>
+                              <td style={{ minWidth: 140 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray-800)', minWidth: 38 }}>
+                                    {utilPct}%
+                                  </span>
+                                  <div style={{ flex: 1, height: 6, background: '#e2e8f0', borderRadius: 3, overflow: 'hidden' }}>
+                                    <div
+                                      style={{
+                                        height: '100%',
+                                        width: `${utilPct}%`,
+                                        background: barColor,
+                                        borderRadius: 3,
+                                      }}
+                                    />
+                                  </div>
                                 </div>
-                                <ProgressBar value={utilPct} max={100} variant={utilLevel} />
                               </td>
                               <td>
-                                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                                <div style={{ fontSize: 12, color: 'var(--gray-800)', fontWeight: 500 }}>
                                   {formatDate(lic.expiry_date)}
                                 </div>
                                 <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
@@ -964,17 +1173,36 @@ const LicensesPage = () => {
                                 </Badge>
                               </td>
                               <td style={{ textAlign: 'right' }}>
-                                <button
-                                  className="btn btn-secondary btn-sm"
-                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedLicense(lic);
-                                  }}
-                                >
-                                  <Users size={13} />
-                                  <span>Show Users</span>
-                                </button>
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                  <button
+                                    className="btn btn-secondary btn-sm"
+                                    style={{
+                                      borderRadius: 6,
+                                      fontSize: 12,
+                                      padding: '4px 12px',
+                                      fontWeight: 500,
+                                      background: 'white',
+                                      border: '1px solid var(--border-color)',
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedLicense(lic);
+                                    }}
+                                  >
+                                    View Users
+                                  </button>
+                                  <button
+                                    className="btn btn-icon btn-sm"
+                                    style={{ color: 'var(--gray-400)', padding: 4 }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedLicense(lic);
+                                    }}
+                                    title="More options"
+                                  >
+                                    <MoreVertical size={15} />
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           );
